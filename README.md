@@ -98,8 +98,6 @@ Cosine similarity measures the angle between two embedding vectors in high-dimen
 - Document clustering and classification
 
 ## How to Run the Project
-### Option 1 — Google Colab (Recommended)
-
 - Open the notebook in Google Colab
 - Run all cells sequentially
 - Install dependencies if prompted:
