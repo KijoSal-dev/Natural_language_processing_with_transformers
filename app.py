@@ -1,11 +1,12 @@
 import gradio as gr
-import tensorflow as tf
-from transformers import BertTokenizer, TFBertModel
+import torch
+from transformers import BertTokenizer, BertModel
 
 MODEL_NAME = "bert-base-uncased"
 
 tokenizer = BertTokenizer.from_pretrained(MODEL_NAME)
-model = TFBertModel.from_pretrained(MODEL_NAME)
+model = BertModel.from_pretrained(MODEL_NAME)
+model.eval()
 
 def bert_embed(text):
     if not text or not text.strip():
@@ -13,19 +14,20 @@ def bert_embed(text):
 
     inputs = tokenizer(
         text,
-        return_tensors="tf",
+        return_tensors="pt",
         truncation=True,
         padding=True,
         max_length=128,
     )
 
-    outputs = model(**inputs)
-    embedding = tf.reduce_mean(outputs.last_hidden_state, axis=1).numpy()[0]
+    with torch.no_grad():
+        outputs = model(**inputs)
+        embedding = outputs.last_hidden_state.mean(dim=1).squeeze().tolist()
 
     return {
         "text": text,
-        "embedding_shape": list(embedding.shape),
-        "embedding_first_20_values": embedding[:20].tolist(),
+        "embedding_shape": [len(embedding)],
+        "embedding_first_20_values": embedding[:20],
     }
 
 demo = gr.Interface(
