@@ -1,3 +1,5 @@
+import spaces  # MUST be the first import — before torch/transformers, required by ZeroGPU
+
 import gradio as gr
 import torch
 from transformers import BertTokenizer, BertModel
@@ -13,6 +15,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = model.to(device)
 model.eval()
 
+
+@spaces.GPU
 def bert_embed(text):
     if not text or not text.strip():
         return {"error": "Please enter some text."}
@@ -24,18 +28,18 @@ def bert_embed(text):
         padding=True,
         max_length=128,
     )
-    
+
     # Move to device
     inputs = {k: v.to(device) for k, v in inputs.items()}
 
     with torch.no_grad():
         outputs = model(**inputs)
         embedding = outputs.last_hidden_state.mean(dim=1).squeeze()
-        
+
         # Move to CPU for JSON serialization
         if torch.cuda.is_available():
             embedding = embedding.cpu()
-        
+
         embedding = embedding.tolist()
 
     return {
@@ -44,7 +48,8 @@ def bert_embed(text):
         "embedding_first_20_values": embedding[:20],
     }
 
-# Create the interface - MINIMAL version
+
+# Create the interface
 demo = gr.Interface(
     fn=bert_embed,
     inputs=gr.Textbox(lines=3, label="Enter text"),
