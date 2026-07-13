@@ -2,26 +2,30 @@ import gradio as gr
 import torch
 import warnings
 from transformers import BertTokenizer, BertModel
-import spaces
 
 # Suppress warnings
 warnings.filterwarnings("ignore")
 
 MODEL_NAME = "bert-base-uncased"
 
+# Check if CUDA is available
+if torch.cuda.is_available():
+    print("✅ GPU is available, using CUDA")
+    device = torch.device("cuda")
+else:
+    print("ℹ️ GPU not available, using CPU")
+    device = torch.device("cpu")
+
 # Load tokenizer and model
 tokenizer = BertTokenizer.from_pretrained(MODEL_NAME)
-
-# Load model and move to appropriate device
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(f"📱 Using device: {device}")
-
 model = BertModel.from_pretrained(MODEL_NAME)
+
+# Move model to the correct device
 model = model.to(device)
 model.eval()
 
-# The @spaces.GPU decorator ensures proper GPU handling in Spaces
-@spaces.GPU
+print(f"📱 Model loaded on: {device}")
+
 def bert_embed(text):
     """
     Generate BERT embeddings for input text
@@ -45,36 +49,37 @@ def bert_embed(text):
         # Generate embeddings
         with torch.no_grad():
             outputs = model(**inputs)
-            # Use mean pooling to get a single embedding vector
-            embedding = outputs.last_hidden_state.mean(dim=1).squeeze()
+            # Use CLS token embedding (alternative to mean pooling)
+            embedding = outputs.pooler_output.squeeze()
             
             # Move to CPU for JSON serialization
-            embedding = embedding.cpu().tolist()
+            if torch.cuda.is_available():
+                embedding = embedding.cpu()
+            
+            embedding = embedding.tolist()
         
         return {
             "text": text,
-            "embedding_shape": [len(embedding)],
-            "embedding_first_20_values": embedding[:20],
-            "device_used": str(device),
-            "embedding_dimension": len(embedding)
+            "text_length": len(text),
+            "embedding_dimension": len(embedding),
+            "embedding_first_10_values": embedding[:10],
+            "embedding_summary": f"Vector of {len(embedding)} dimensions",
+            "device_used": str(device)
         }
     
     except Exception as e:
         return {"error": f"An error occurred: {str(e)}"}
 
-# Create a more informative interface
+# Create the interface - REMOVED 'info' parameter from gr.JSON
 demo = gr.Interface(
     fn=bert_embed,
     inputs=gr.Textbox(
-        lines=5, 
+        lines=3, 
         label="Enter text", 
-        placeholder="Type or paste your text here...",
+        placeholder="Type your text here...",
         info="Enter any text to get BERT embeddings"
     ),
-    outputs=gr.JSON(
-        label="Embedding Output",
-        info="BERT embeddings and metadata"
-    ),
+    outputs=gr.JSON(label="Output"),  # Removed 'info' parameter
     title="BERT Embedding Demo",
     description="Simple BERT text embedding demo on Hugging Face Spaces.",
     examples=[
@@ -87,6 +92,6 @@ demo = gr.Interface(
 
 if __name__ == "__main__":
     demo.launch(
-        server_name="0.0.0.0",
+        server_name="0.0.0.0", 
         server_port=7860
     )
