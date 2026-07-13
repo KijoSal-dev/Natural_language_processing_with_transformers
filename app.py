@@ -20,20 +20,20 @@ def bert_embed(text):
     )
 
     outputs = model(**inputs)
-    embeddings = tf.reduce_mean(outputs.last_hidden_state, axis=1).numpy()[0]
+    embedding = tf.reduce_mean(outputs.last_hidden_state, axis=1).numpy()[0]
 
     return {
         "text": text,
-        "embedding_shape": list(embeddings.shape),
-        "embedding": embeddings[:20].tolist(),
+        "embedding_shape": list(embedding.shape),
+        "embedding_first_20_values": embedding[:20].tolist(),
     }
 
 demo = gr.Interface(
     fn=bert_embed,
-    inputs=gr.Textbox(lines=3, placeholder="Enter text here..."),
-    outputs=gr.JSON(),
+    inputs=gr.Textbox(lines=3, label="Enter text"),
+    outputs=gr.JSON(label="Output"),
     title="BERT Embedding Demo",
-    description="A simple Hugging Face Space using BERT with Gradio.",
+    description="Simple BERT text embedding demo on Hugging Face Spaces.",
 )
 
 if __name__ == "__main__":
